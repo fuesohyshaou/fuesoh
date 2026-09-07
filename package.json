@@ -10,6 +10,14 @@
     "server:dev": "npm --prefix backend run dev"
   },
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fuesohyshaou/fuesoh.git"
+  },
+  "homepage": "https://github.com/fuesohyshaou/fuesoh",
+  "bugs": {
+    "url": "https://github.com/fuesohyshaou/fuesoh/issues"
+  },
   "devDependencies": {},
   "author": "",
   "license": "ISC"
