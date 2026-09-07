@@ -1,0 +1,16 @@
+{
+  "name": "it-isep-website",
+  "version": "3.1.0",
+  "description": "IT-ISEP LTD website - client app (React/Vite) + Node server (Express/MySQL)",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "preview": "npm --prefix frontend run preview",
+    "server": "npm --prefix backend run start",
+    "server:dev": "npm --prefix backend run dev"
+  },
+  "main": "index.js",
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}

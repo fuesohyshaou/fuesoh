@@ -1,0 +1,23 @@
+{
+  "name": "it-isep-server",
+  "private": true,
+  "version": "1.0.0",
+  "description": "IT-ISEP LTD server - Express REST API + MySQL persistence",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^4.21.2",
+    "multer": "^2.3.0",
+    "mysql2": "^3.24.3",
+    "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
