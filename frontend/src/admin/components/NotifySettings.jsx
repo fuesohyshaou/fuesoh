@@ -9,9 +9,11 @@ export default function NotifySettings() {
   const [smtpHint, setSmtpHint] = useState('');
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState(null);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     try {
       const cfg = await api.getNotifications();
       setEnabled(cfg.enabled !== false);
@@ -19,6 +21,8 @@ export default function NotifySettings() {
       setSmtpHint(cfg.smtpHost || '');
     } catch {
       // server offline - keep current state
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -64,7 +68,16 @@ export default function NotifySettings() {
     <div className="max-w-xl bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <h2 className="font-bold text-[#071A2F]">Mail Notifications</h2>
-        <button onClick={load} className="text-sm text-[#0B63CE] font-semibold hover:underline cursor-pointer">Refresh</button>
+        <button
+          onClick={load}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 text-sm text-[#0B63CE] font-semibold hover:underline cursor-pointer disabled:text-slate-300 disabled:cursor-not-allowed"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+            <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
       <div className="p-5 space-y-4">
         <p className="text-sm text-slate-500 leading-relaxed">

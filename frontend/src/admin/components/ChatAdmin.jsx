@@ -16,6 +16,7 @@ export default function ChatAdmin() {
   const [thread, setThread] = useState([]);
   const [reply, setReply] = useState('');
   const [sending, setSending] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollRef = useRef(null);
 
   const loadSessions = useCallback(async () => {
@@ -36,6 +37,16 @@ export default function ChatAdmin() {
       setThread(rows || []);
     } catch { /* ignore */ }
   }, []);
+
+  const refreshAll = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadSessions();
+      await loadThread(active);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadSessions, loadThread, active]);
 
   useEffect(() => {
     loadSessions();
@@ -74,7 +85,19 @@ export default function ChatAdmin() {
       <div className="border-r border-slate-100 flex flex-col max-h-[70vh]">
         <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
           <h3 className="font-bold text-[#071A2F] text-sm">Open sessions</h3>
-          <span className="text-[11px] text-slate-400">{sessions.length} total</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] text-slate-400">{sessions.length} total</span>
+            <button
+              onClick={refreshAll}
+              disabled={refreshing}
+              className="inline-flex items-center gap-1.5 text-[11px] text-[#0B63CE] font-semibold hover:underline cursor-pointer disabled:text-slate-300 disabled:cursor-not-allowed"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+                <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
           {sessions.length === 0 ? (

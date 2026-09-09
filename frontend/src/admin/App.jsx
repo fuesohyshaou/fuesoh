@@ -10,6 +10,7 @@ import Stats from './components/Stats.jsx';
 import ChatAdmin from './components/ChatAdmin.jsx';
 import HomeSettings from './components/HomeSettings.jsx';
 import NotifySettings from './components/NotifySettings.jsx';
+import Profile from './components/Profile.jsx';
 import {
   headers,
   titles,
@@ -25,6 +26,7 @@ import {
 
 const TABS = [
   { id: 'dashboard', label: 'Dashboard', icon: <Icon path="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" /> },
+  { id: 'profile', label: 'My Profile', icon: <Icon path="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a8 8 0 0 1 16 0v1" /> },
   { id: 'availability', label: 'Availability Checks', icon: <Icon path="M9 3v2M15 3v2M4 8h16M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm4 9 2 2 4-4" /> },
   { id: 'quotes', label: 'Quote Requests', icon: <Icon path="M4 2h16v16l-8 5-3-2-1 2-4-2zM8 7h8M8 11h8M8 15h5" /> },
   { id: 'equipment', label: 'Equipment', icon: <Icon path="M6 6h12v12H6zM9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3" /> },
@@ -64,8 +66,11 @@ export default function App() {
   const [modal, setModal] = useState(null);
   const [serverOk, setServerOk] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const loadAll = useCallback(async () => {
+    setRefreshing(true);
     try {
       const [availability, quotes, equipment, services, admins, users, bookings, technicians] = await Promise.all([
         api.getAvailability(),
@@ -91,6 +96,9 @@ export default function App() {
         technicians: []
       });
       setServerOk(false);
+    } finally {
+      setRefreshing(false);
+      setLastUpdated(new Date());
     }
   }, []);
 
@@ -162,6 +170,11 @@ export default function App() {
           </button>
           <p className="font-bold">IT-ISEP <span className="text-[#00B8D9]">LTD</span> Admin</p>
           <div className="flex items-center gap-2">
+            <button onClick={loadAll} disabled={refreshing} className="p-1.5 hover:bg-white/10 rounded-lg cursor-pointer disabled:opacity-50" aria-label="Refresh data">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+                <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
             <span
               className={`inline-flex items-center gap-1.5 text-xs ${serverOk === false ? 'text-red-300' : 'text-slate-300'}`}
               title={serverOk === false ? 'The API server is not reachable.' : 'The API server is reachable.'}
@@ -189,6 +202,21 @@ export default function App() {
               ></span>
               {serverOk === false ? 'Server offline' : serverOk === true ? 'Connected to server' : 'Checking…'}
             </span>
+            {lastUpdated && (
+              <span className="hidden xl:inline text-xs text-slate-400">
+                Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+            )}
+            <button
+              onClick={loadAll}
+              disabled={refreshing}
+              className="inline-flex items-center gap-2 text-sm bg-[#0B63CE] hover:bg-blue-600 disabled:bg-slate-200 disabled:cursor-not-allowed text-white font-semibold px-4 py-2 rounded-lg transition cursor-pointer"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+                <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {refreshing ? 'Refreshing…' : 'Refresh'}
+            </button>
             <a href="index.html" className="text-sm text-[#0B63CE] hover:underline">← Back to website</a>
           </div>
         </header>
@@ -214,7 +242,9 @@ export default function App() {
           ) : tab === 'mail' ? (
             <NotifySettings />
           ) : tab === 'dashboard' ? (
-            <Overview data={data} setTab={setTab} />
+            <Overview data={data} setTab={setTab} refreshing={refreshing} onRefresh={loadAll} />
+          ) : tab === 'profile' ? (
+            <Profile />
           ) : (
             <>
               <Stats data={data} />
@@ -231,7 +261,21 @@ export default function App() {
                         {tab === 'admins' ? '+ Add Administrator' : tab === 'technicians' ? '+ Add Technician' : '+ Add new'}
                       </button>
                     )}
-                    <button onClick={loadAll} className="text-sm text-[#0B63CE] font-semibold hover:underline cursor-pointer">Refresh</button>
+                    <button
+                      onClick={loadAll}
+                      disabled={refreshing}
+                      className="inline-flex items-center gap-2 text-sm text-[#0B63CE] font-semibold hover:underline cursor-pointer disabled:text-slate-300 disabled:cursor-not-allowed"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+                        <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                      {refreshing ? 'Refreshing…' : 'Refresh'}
+                    </button>
+                    {lastUpdated && (
+                      <span className="text-[11px] text-slate-400 hidden sm:inline">
+                        Updated {lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="overflow-x-auto">
@@ -340,7 +384,11 @@ function Sidebar({ user, displayName, displayEmail, tab, setTab, mobileOpen, onC
         </nav>
 
         <div className="p-4 border-t border-white/10">
-          <div className="flex items-center gap-3">
+          <button
+            onClick={() => setTab('profile')}
+            className="w-full flex items-center gap-3 text-left hover:bg-white/10 rounded-lg px-2 py-2 transition cursor-pointer"
+            title="Open my profile"
+          >
             <div className="relative shrink-0">
               <div className="w-10 h-10 rounded-full bg-[#0B63CE] flex items-center justify-center font-bold text-sm">{avatarChar}</div>
               <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-[#071A2F]" title="Online"></span>
@@ -353,7 +401,7 @@ function Sidebar({ user, displayName, displayEmail, tab, setTab, mobileOpen, onC
                 Admin · online
               </span>
             </div>
-          </div>
+          </button>
           <button
             onClick={onSignOut}
             className="mt-3 w-full flex items-center justify-center gap-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 hover:text-red-200 border border-white/10 rounded-lg px-3 py-2 transition cursor-pointer"
@@ -370,12 +418,24 @@ function Sidebar({ user, displayName, displayEmail, tab, setTab, mobileOpen, onC
   );
 }
 
-function Overview({ data, setTab }) {
+function Overview({ data, setTab, refreshing, onRefresh }) {
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-extrabold text-[#071A2F]">Dashboard</h2>
-        <p className="text-sm text-slate-500 mt-0.5">Everything that arrives from the website, in one place.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-extrabold text-[#071A2F]">Dashboard</h2>
+          <p className="text-sm text-slate-500 mt-0.5">Everything that arrives from the website, in one place.</p>
+        </div>
+        <button
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 text-sm bg-white hover:bg-slate-50 disabled:opacity-50 text-[#0B63CE] font-semibold border border-slate-200 px-4 py-2 rounded-lg transition cursor-pointer disabled:cursor-not-allowed"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+            <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
 
       <Stats data={data} />

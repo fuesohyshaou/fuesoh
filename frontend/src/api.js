@@ -62,6 +62,7 @@ export const api = {
   register: (name, email, password) => request('/auth/register', { method: 'POST', body: { name, email, password } }),
   login: (identifier, password) => request('/auth/login', { method: 'POST', body: { identifier, password } }),
   me: token => request('/auth/me', { method: 'GET', headers: { Authorization: `Bearer ${token}` } }),
+  updateProfile: data => request('/auth/me', { method: 'PUT', body: data }),
   logout: token => request('/auth/logout', { method: 'POST', body: { token } }),
 
   getAdmins: () => request('/admin/admins'),

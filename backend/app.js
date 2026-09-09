@@ -723,9 +723,55 @@ app.get('/api/auth/me', async (req, res) => {
     const auth = req.headers.authorization || '';
     const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.query.token || '');
     if (!token) return res.status(401).json({ ok: false, error: 'Not authenticated' });
-    const user = await db.get('SELECT id, name, email, username, role FROM users WHERE token=?', [token]);
+    const user = await db.get('SELECT id, name, email, username, role, created_at FROM users WHERE token=?', [token]);
     if (!user) return res.status(401).json({ ok: false, error: 'Invalid session' });
     res.json({ ok: true, user: { ...user, name: user.name || user.username, email: user.email || user.username } });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
+  }
+});
+
+app.put('/api/auth/me', async (req, res) => {
+  try {
+    const auth = req.headers.authorization || '';
+    const token = auth.startsWith('Bearer ') ? auth.slice(7) : (req.query.token || '');
+    if (!token) return res.status(401).json({ ok: false, error: 'Not authenticated' });
+    const user = await db.get('SELECT * FROM users WHERE token=?', [token]);
+    if (!user) return res.status(401).json({ ok: false, error: 'Invalid session' });
+
+    const b = req.body || {};
+    const name = b.name !== undefined ? String(b.name).trim() : user.name;
+    const email = b.email !== undefined ? String(b.email).trim().toLowerCase() : user.email;
+
+    if (email) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ ok: false, error: 'Please enter a valid email address' });
+      }
+      const dup = await db.get('SELECT id FROM users WHERE email=? AND id<>?', [email, user.id]);
+      if (dup) return res.status(409).json({ ok: false, error: 'That email is already in use' });
+    }
+
+    if (b.new_password) {
+      if (!(await verifyPassword(b.current_password, user.password_hash))) {
+        return res.status(400).json({ ok: false, error: 'Current password is incorrect' });
+      }
+      if (String(b.new_password).length < 6) {
+        return res.status(400).json({ ok: false, error: 'New password must be at least 6 characters' });
+      }
+      await db.run('UPDATE users SET password_hash=? WHERE id=?', [await hashPassword(b.new_password), user.id]);
+    }
+
+    await db.run('UPDATE users SET name=?, email=? WHERE id=?', [name || user.username, email || null, user.id]);
+    res.json({
+      ok: true,
+      user: {
+        id: user.id,
+        name: name || user.username,
+        email: (email || user.username),
+        username: user.username,
+        role: user.role
+      }
+    });
   } catch (err) {
     res.status(400).json({ ok: false, error: err.message });
   }

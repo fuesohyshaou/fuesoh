@@ -10,15 +10,20 @@ const OVERLAY =
 export default function HomeSettings() {
   const [heroBackground, setHeroBackground] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState(null);
+  const [copied, setCopied] = useState(false);
   const fileRef = useRef(null);
 
   const load = useCallback(async () => {
+    setRefreshing(true);
     try {
       const s = await api.getSettings();
       setHeroBackground(s.heroBackground || null);
     } catch {
       // server offline - keep current state
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -65,6 +70,17 @@ export default function HomeSettings() {
     }
   }
 
+  async function copyUrl() {
+    if (!heroBackground) return;
+    try {
+      await navigator.clipboard.writeText(window.location.origin + heroBackground);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setMessage({ type: 'error', text: 'Could not copy. The image URL is shown below.' });
+    }
+  }
+
   const previewStyle = heroBackground
     ? {
         backgroundImage: `${OVERLAY}, url('${heroBackground}')`,
@@ -80,7 +96,16 @@ export default function HomeSettings() {
     <div className="max-w-xl bg-white rounded-xl shadow-sm overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
         <h2 className="font-bold text-[#071A2F]">Home Page Background</h2>
-        <button onClick={load} className="text-sm text-[#0B63CE] font-semibold hover:underline cursor-pointer">Refresh</button>
+        <button
+          onClick={load}
+          disabled={refreshing}
+          className="inline-flex items-center gap-2 text-sm text-[#0B63CE] font-semibold hover:underline cursor-pointer disabled:text-slate-300 disabled:cursor-not-allowed"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" className={refreshing ? 'animate-spin' : ''}>
+            <path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
       </div>
       <div className="p-5 space-y-4">
         <p className="text-sm text-slate-500 leading-relaxed">
@@ -112,40 +137,57 @@ export default function HomeSettings() {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => fileRef.current && fileRef.current.click()}
+          className="w-full inline-flex items-center justify-center gap-2 bg-[#0B63CE] hover:bg-blue-600 text-white font-semibold px-4 py-3.5 rounded-lg text-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 16V4m0 0l-4 4m4-4l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+          </svg>
+          {busy ? 'Uploading…' : heroBackground ? 'Replace Home Image' : 'Upload Home Image'}
+        </button>
+        <input
+          type="file"
+          accept={ACCEPT}
+          ref={fileRef}
+          className="hidden"
+          disabled={busy}
+          onChange={e => {
+            handleFile(e.target.files[0]);
+            e.target.value = '';
+          }}
+        />
+        {heroBackground && !busy && (
           <button
             type="button"
-            disabled={busy}
-            onClick={() => fileRef.current && fileRef.current.click()}
-            className="inline-flex items-center gap-2 bg-[#0B63CE] hover:bg-blue-600 text-white font-semibold px-4 py-2.5 rounded-lg text-sm transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleRemove}
+            className="w-full text-sm text-red-600 hover:text-red-700 font-semibold border border-red-200 hover:bg-red-50 rounded-lg px-4 py-2.5 cursor-pointer"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-              <path d="M12 16V4m0 0l-4 4m4-4l4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-            </svg>
-            {busy ? 'Uploading…' : heroBackground ? 'Replace background image' : 'Upload background image'}
+            Remove background
           </button>
-          <input
-            type="file"
-            accept={ACCEPT}
-            ref={fileRef}
-            className="hidden"
-            disabled={busy}
-            onChange={e => {
-              handleFile(e.target.files[0]);
-              e.target.value = '';
-            }}
-          />
-          {heroBackground && !busy && (
+        )}
+
+        {heroBackground && (
+          <div className="rounded-lg bg-slate-50 border border-slate-100 px-3.5 py-3 flex items-center gap-2">
+            <input
+              readOnly
+              value={window.location.origin + heroBackground}
+              onFocus={e => e.target.select()}
+              className="w-full bg-transparent text-xs text-slate-500 font-mono focus:outline-none"
+            />
             <button
               type="button"
-              onClick={handleRemove}
-              className="text-sm text-red-600 hover:text-red-700 font-semibold border border-red-200 hover:bg-red-50 rounded-lg px-4 py-2.5 cursor-pointer"
+              onClick={copyUrl}
+              className="shrink-0 text-[11px] font-semibold text-[#0B63CE] border border-[#0B63CE] hover:bg-[#0B63CE] hover:text-white rounded-lg px-3 py-1.5 cursor-pointer"
             >
-              Remove background
+              {copied ? 'Copied!' : 'Copy URL'}
             </button>
-          )}
-        </div>
+          </div>
+        )}
+
         <p className="text-[11px] text-slate-400">PNG, JPG, WebP or GIF. Max 4 MB.</p>
       </div>
     </div>
